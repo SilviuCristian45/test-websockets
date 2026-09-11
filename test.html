@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat WebSocket</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body style="font-family: Arial; padding: 20px;">
+    <h2>Testare WebSockets NestJS</h2>
+    <input type="text" id="inputMesaj" placeholder="Scrie un mesaj...">
+	<input type="text" id="numeUser" placeholder="introdu numele...">
+    <button onclick="trimiteMesaj()">Trimite</button>
+    
+    <ul id="listaMesaje" style="margin-top: 20px;"></ul>
+
+    <script>
+        const socket = io('http://localhost:3008');
+
+        socket.on('connect', () => {
+            console.log('Conectat la serverul NestJS!');
+        });
+
+        // Ascultăm evenimentul 'mesaj_nou' trimis de backend
+        socket.on('mesaj_nou', (data) => {
+			const { mesaj, username } = data;
+			console.log(data);
+            const ul = document.getElementById('listaMesaje');
+            const li = document.createElement('li');
+            li.textContent = username + ' spune : ' + mesaj;
+            ul.appendChild(li);
+        });
+
+        function trimiteMesaj() {
+
+			const username = document.getElementById('numeUser');
+            const input = document.getElementById('inputMesaj');
+            const mesaj = input.value;
+			const usernameValue = username.value;
+
+			if (usernameValue?.length === 0) {
+				alert('introduceti numele de utilizator te rog ');
+				return;
+			}
+
+            // Trimitem mesajul către backend
+            socket.emit('trimite_mesaj', { mesaj, username: usernameValue});
+            input.value = ''; // curățăm inputul
+        }
+    </script>
+</body>
+</html>
