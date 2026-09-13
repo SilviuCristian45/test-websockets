@@ -21,6 +21,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleConnection(client: Socket) {
     this.logger.log(`Client conectat: ${client.id}`);
+    client.emit('room_created', { rooms: Array.from(this.rooms) })
   }
 
   handleDisconnect(client: Socket) {
@@ -38,20 +39,41 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.broadcast.emit('mesaj_nou', data);
   }
 
-  @SubscribeMessage('join_room')
-  handleJoinRoom(
+  @SubscribeMessage('trimite_mesaj_room')
+  handleMessageToRoom(
+    @MessageBody() data: { room: string, message: string, username: string },
+    @ConnectedSocket() client: Socket,
+  ): void {
+    this.logger.log(`client ${client.id} trimite mesajul ${data.message} in room ${data.room}`)
+    this.server.to(data.room).emit('mesaj_nou', {mesaj: data.message, username: data.username});
+  }
+
+  @SubscribeMessage('create_room')
+  handleCreateRoom(
  	@MessageBody() data: string, 
     @ConnectedSocket() client: Socket
   ): void {
-	if (this.rooms.has(data)) {
-		this.logger.log(`room ${data} is existing`)
+	  client.join(data);
+    this.rooms.add(data);
+    this.logger.log(`Client ${client.id} a creat camera: ${data}`);
+    this.server.emit('room_created', { rooms: Array.from(this.rooms) });
+  }
 
-		client.join(data);
+  @SubscribeMessage('join_room')
+  handleJoinRoom(
+    @MessageBody() data: string,
+    @ConnectedSocket() client: Socket
+  ): void {
+    client.join(data);
+    this.logger.log(`Client ${client.id} a intrat în camera: ${data}`);
+  }
 
-	} else {
-		this.logger.warn(`room ${data} is not existing`);
-		this.rooms.add(data);
-		this.logger.log(`room ${data} added`)
-	}
+  @SubscribeMessage('leave_room')
+  handleLeaveRoom(
+    @MessageBody() data: string,
+    @ConnectedSocket() client: Socket
+  ): void {
+    client.leave(data);
+    this.logger.log(`Client ${client.id} a părăsit camera: ${data}`);
   }
 }

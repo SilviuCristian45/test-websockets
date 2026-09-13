@@ -10,6 +10,20 @@
 	<input type="text" id="numeUser" placeholder="introdu numele...">
     <button onclick="trimiteMesaj()">Trimite</button>
     
+
+    <h2>Camere disponibile</h2>
+    <select id="camereDisponibile" style="margin-bottom: 20px;" aria-placeholder="Selecteaza camera">
+        <option value="" disabled selected>Selecteaza camera</option>
+    </select>
+
+    <div id="userStatus"> Deconectat </div>
+    <button onclick="joinRoom()">Join Room</button>
+    <button onclick="leaveRoom()">Leave Room</button>
+
+    <h3>Creeaza camera</h3>
+	<input type="text" id="numeCamera" placeholder="Introdu numele camerei...">
+    <button onclick="creeazaCamera()">Creeaza</button>
+
     <ul id="listaMesaje" style="margin-top: 20px;"></ul>
 
     <script>
@@ -29,6 +43,21 @@
             ul.appendChild(li);
         });
 
+         // Ascultăm evenimentul 'room_created' pentru a actualiza lista de camere
+        socket.on('room_created', (rooms) => {
+            console.log('room created')
+            const roomsItems = rooms?.rooms || [];
+            console.log(roomsItems)
+            const select = document.getElementById('camereDisponibile');
+            select.innerHTML = '<option value="" disabled selected>Selecteaza camera</option>'; // Resetăm lista de camere
+            roomsItems.forEach(room => {
+                const option = document.createElement('option');
+                option.value = room;
+                option.textContent = room;
+                select.appendChild(option);
+            });
+        });
+
         function trimiteMesaj() {
 
 			const username = document.getElementById('numeUser');
@@ -36,14 +65,69 @@
             const mesaj = input.value;
 			const usernameValue = username.value;
 
+            const rooms = document.getElementById('camereDisponibile');
+            const activeRoom = rooms.value;
+
+            
+
 			if (usernameValue?.length === 0) {
 				alert('introduceti numele de utilizator te rog ');
 				return;
 			}
 
+            if (activeRoom) {
+                socket.emit('trimite_mesaj_room', { message: mesaj, username: usernameValue, room: activeRoom})
+                input.value = '';
+                return;
+            }
+
             // Trimitem mesajul către backend
             socket.emit('trimite_mesaj', { mesaj, username: usernameValue});
             input.value = ''; // curățăm inputul
+        }
+
+        function creeazaCamera() {
+            const inputCamera = document.getElementById('numeCamera');
+            const numeCamera = inputCamera.value;
+
+            if (numeCamera?.length === 0) {
+                alert('introduceti numele camerei te rog ');
+                return;
+            }
+
+            // Trimitem cererea de creare a camerei către backend
+            socket.emit('create_room', numeCamera);
+
+            inputCamera.value = ''; // curățăm inputul
+        }
+
+        function joinRoom() {
+            const select = document.getElementById('camereDisponibile');
+            const selectedRoom = select.value;
+
+            if (!selectedRoom) {
+                alert('Selecteaza o camera pentru a te alatura.');
+                return;
+            }
+
+            // Trimitem cererea de alaturare la camera către backend
+            socket.emit('join_room', selectedRoom);
+            document.getElementById('userStatus').textContent = `Conectat la camera: ${selectedRoom}`;
+        }
+
+        function leaveRoom() {
+            const select = document.getElementById('camereDisponibile');
+            const selectedRoom = select.value;
+
+            if (!selectedRoom) {
+                alert('Selecteaza o camera pentru a o parasi.');
+                return;
+            }
+            
+
+            // Trimitem cererea de parasire a camerei către backend
+            socket.emit('leave_room', selectedRoom);
+            document.getElementById('userStatus').textContent = 'Deconectat';
         }
     </script>
 </body>
