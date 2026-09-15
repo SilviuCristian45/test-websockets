@@ -9,12 +9,19 @@ import {
   OnGatewayDisconnect
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { ChatService } from './chat.service.js';
 
 @WebSocketGateway({ cors: true }) 
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   
 	private logger = new Logger(ChatGateway.name);
 	private rooms = new Set<string>();
+
+	constructor(
+		private readonly chatService: ChatService
+	) {
+
+	}
 
   @WebSocketServer()
   server: Server;
@@ -35,6 +42,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ): void {
 	const { mesaj, username } = data;
     this.logger.log(`Mesaj primit de la ${client.id} cu username ${username}:`, mesaj);
+
     // Trimitem mesajul tuturor celor conectați
     client.broadcast.emit('mesaj_nou', data);
   }
@@ -45,6 +53,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
   ): void {
     this.logger.log(`client ${client.id} trimite mesajul ${data.message} in room ${data.room}`)
+	this.chatService.saveMessage(data);
     this.server.to(data.room).emit('mesaj_nou', {mesaj: data.message, username: data.username});
   }
 
