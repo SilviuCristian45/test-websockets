@@ -10,15 +10,19 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service.js';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Events } from './utils/events.js';
 
 @WebSocketGateway({ cors: true }) 
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   
 	private logger = new Logger(ChatGateway.name);
 	private rooms = new Set<string>();
+	private users = new Map<string, string>();
 
 	constructor(
-		private readonly chatService: ChatService
+		private readonly chatService: ChatService,
+		private eventEmitter: EventEmitter2
 	) {
 
 	}
@@ -44,7 +48,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(`Mesaj primit de la ${client.id} cu username ${username}:`, mesaj);
 
     // Trimitem mesajul tuturor celor conectați
-    client.broadcast.emit('mesaj_nou', data);
+    client.broadcast.emit('mesaj_nou', {...data, createdAt: new Date()});
   }
 
   @SubscribeMessage('trimite_mesaj_room')
@@ -52,9 +56,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { room: string, message: string, username: string },
     @ConnectedSocket() client: Socket,
   ): void {
-    this.logger.log(`client ${client.id} trimite mesajul ${data.message} in room ${data.room}`)
-	this.chatService.saveMessage(data);
-    this.server.to(data.room).emit('mesaj_nou', {mesaj: data.message, username: data.username});
+	this.users.set(client.id, data.username);
+    this.logger.log(`client ${this.users.get(client.id)} trimite mesajul ${data.message} in room ${data.room}`)
+    this.server.to(data.room).emit('mesaj_nou', {mesaj: data.message, username: data.username, createdAt: new Date()});
+    this.eventEmitter.emit(Events.saveMessage, data);
   }
 
   @SubscribeMessage('create_room')

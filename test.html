@@ -8,7 +8,7 @@
     <h2>Testare WebSockets NestJS</h2>
     <input type="text" id="inputMesaj" placeholder="Scrie un mesaj...">
 	<input type="text" id="numeUser" placeholder="introdu numele...">
-    <button onclick="trimiteMesaj()">Trimite</button>
+    <button type="button" onclick="trimiteMesaj()">Trimite</button>
     
 
     <h2>Camere disponibile</h2>
@@ -35,11 +35,13 @@
 
         // Ascultăm evenimentul 'mesaj_nou' trimis de backend
         socket.on('mesaj_nou', (data) => {
-			const { mesaj, username } = data;
+			const { mesaj, username, createdAt } = data;
 			console.log(data);
             const ul = document.getElementById('listaMesaje');
             const li = document.createElement('li');
-            li.textContent = username + ' spune : ' + mesaj;
+			const dataa = new Date(createdAt).toLocaleDateString('ro-Ro');
+			const ora = new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); 
+            li.textContent = `Data: ${dataa} \n [${ora.toString()}]` + username + ' spune : ' + mesaj;
             ul.appendChild(li);
         });
 
@@ -58,8 +60,8 @@
             });
         });
 
-        function trimiteMesaj() {
-
+        function trimiteMesaj(event) {
+			if (event) event.preventDefault();
 			const username = document.getElementById('numeUser');
             const input = document.getElementById('inputMesaj');
             const mesaj = input.value;

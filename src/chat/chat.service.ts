@@ -2,6 +2,8 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Repository } from "typeorm";
 import { Message } from "./entities/message.entity.js";
 import { InjectRepository } from "@nestjs/typeorm";
+import { OnEvent } from "@nestjs/event-emitter";
+import { Events } from "./utils/events.js";
 
 @Injectable()
 export class ChatService {
@@ -15,6 +17,7 @@ export class ChatService {
 	}
 
 
+	@OnEvent(Events.saveMessage)
 	public async saveMessage(data: { room: string, message: string, username: string }) {
 		try {
 			const newMessage = this.repository.create({
