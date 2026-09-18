@@ -30,9 +30,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
-  handleConnection(client: Socket) {
+  async getAllRoomsFromDbAndWebSocket() {
+	const roomsFromDb: string[] = await this.chatService.getRoomsFromDb();
+	const finalRooms = new Set(new Array(...roomsFromDb, ...this.rooms))
+	return finalRooms;
+  }
+
+  async handleConnection(client: Socket) {
     this.logger.log(`Client conectat: ${client.id}`);
-    client.emit('room_created', { rooms: Array.from(this.rooms) })
+	const finalRooms = await this.getAllRoomsFromDbAndWebSocket();
+    client.emit('room_created', { rooms: Array.from(finalRooms) })
   }
 
   handleDisconnect(client: Socket) {
@@ -63,14 +70,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('create_room')
-  handleCreateRoom(
+  async handleCreateRoom(
  	@MessageBody() data: string, 
     @ConnectedSocket() client: Socket
-  ): void {
+  ): Promise<void> {
 	  client.join(data);
     this.rooms.add(data);
+	await this.chatService.addRoom(data);
     this.logger.log(`Client ${client.id} a creat camera: ${data}`);
-    this.server.emit('room_created', { rooms: Array.from(this.rooms) });
+	const finalRooms = await this.getAllRoomsFromDbAndWebSocket();
+    this.server.emit('room_created', { rooms: Array.from(finalRooms) });
   }
 
   @SubscribeMessage('join_room')

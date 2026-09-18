@@ -7,6 +7,14 @@ import { Events } from "./utils/events.js";
 
 @Injectable()
 export class ChatService {
+	async addRoom(data: string) {
+		try {
+			await this.saveMessage({ room: data, message: '', username: ''})
+			this.logger.log(`room ${data} added success`)
+		} catch(err) {
+			this.logger.error(err);
+		}
+	}
 
 	private logger = new Logger(ChatService.name);
 	
@@ -15,7 +23,6 @@ export class ChatService {
 	) {
 
 	}
-
 
 	@OnEvent(Events.saveMessage)
 	public async saveMessage(data: { room: string, message: string, username: string }) {
@@ -28,6 +35,20 @@ export class ChatService {
     		await this.repository.save(newMessage); // Așteptăm salvarea
 		} catch(err) {
 			this.logger.error(err);
+		}
+	}
+
+	public async getRoomsFromDb() {
+		try {
+			const queryResult = await this.repository.createQueryBuilder('message')
+                .select('DISTINCT message.room', 'room')
+                .where('message.room IS NOT NULL')
+                .getRawMany();
+			const roomsArray = queryResult.map(item => item.room);
+			return roomsArray;
+		} catch(err) {
+			this.logger.error(err);
+			return [];
 		}
 	}
 }
