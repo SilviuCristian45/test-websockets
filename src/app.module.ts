@@ -5,21 +5,23 @@ import { ChatModule } from './chat/chat.module.js';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Message } from './chat/entities/message.entity.js';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { Room } from './chat/entities/room.entity.js';
 
 @Module({
   imports: [
-	EventEmitterModule.forRoot(),
-	TypeOrmModule.forRoot({
+    EventEmitterModule.forRoot(),
+    TypeOrmModule.forRoot({
       type: 'postgres',
       host: 'localhost',
       port: 5432,
       username: 'chat_user',
       password: 'chat_password',
       database: 'chat_db',
-      entities: [Message],
+      entities: [Message, Room],
       synchronize: true,
     }),
-	ChatModule],
+    ChatModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

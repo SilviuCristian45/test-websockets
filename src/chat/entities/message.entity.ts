@@ -1,4 +1,12 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
+import { Room } from './room.entity.js';
 
 @Entity()
 export class Message {
@@ -11,8 +19,9 @@ export class Message {
   @Column()
   message: string;
 
-  @Column({ nullable: true }) // Poate fi null dacă e un mesaj global, fără cameră
-  room: string;
+  @ManyToOne(() => Room, (r) => r.messages, { nullable: true })
+  @JoinColumn()
+  room: Room | null;
 
   @CreateDateColumn()
   createdAt: Date;

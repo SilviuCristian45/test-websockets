@@ -1,136 +1,179 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
+  <head>
     <title>Chat WebSocket</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-</head>
-<body style="font-family: Arial; padding: 20px;">
+  </head>
+  <body style="font-family: Arial; padding: 20px">
     <h2>Testare WebSockets NestJS</h2>
-    <input type="text" id="inputMesaj" placeholder="Scrie un mesaj...">
-	<input type="text" id="numeUser" placeholder="introdu numele...">
+    <input type="text" id="inputMesaj" placeholder="Scrie un mesaj..." />
+    <input type="text" id="numeUser" placeholder="introdu numele..." />
     <button type="button" onclick="trimiteMesaj()">Trimite</button>
-    
 
     <h2>Camere disponibile</h2>
-    <select id="camereDisponibile" style="margin-bottom: 20px;" aria-placeholder="Selecteaza camera">
-        <option value="" disabled selected>Selecteaza camera</option>
+    <select
+      id="camereDisponibile"
+      style="margin-bottom: 20px"
+      aria-placeholder="Selecteaza camera"
+    >
+      <option value="" disabled selected>Selecteaza camera</option>
     </select>
 
-    <div id="userStatus"> Deconectat </div>
+    <div id="userStatus">Deconectat</div>
     <button onclick="joinRoom()">Join Room</button>
     <button onclick="leaveRoom()">Leave Room</button>
 
     <h3>Creeaza camera</h3>
-	<input type="text" id="numeCamera" placeholder="Introdu numele camerei...">
+    <input
+      type="text"
+      id="numeCamera"
+      placeholder="Introdu numele camerei..."
+    />
     <button onclick="creeazaCamera()">Creeaza</button>
 
-    <ul id="listaMesaje" style="margin-top: 20px;"></ul>
+    <div id="camera">Global</div>
+    <ul id="listaMesaje" style="margin-top: 20px"></ul>
 
     <script>
-        const socket = io('http://localhost:3008');
+      const socket = io('http://localhost:3008');
 
-        socket.on('connect', () => {
-            console.log('Conectat la serverul NestJS!');
+      socket.on('connect', () => {
+        console.log('Conectat la serverul NestJS!');
+      });
+
+      // Ascultăm evenimentul 'mesaj_nou' trimis de backend
+      socket.on('mesaj_nou', (data) => {
+        const { mesaj, username, createdAt } = data;
+        console.log(data);
+        const ul = document.getElementById('listaMesaje');
+        const li = document.createElement('li');
+        const dataa = new Date(createdAt).toLocaleDateString('ro-Ro');
+        const ora = new Date(createdAt).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
         });
+        li.textContent =
+          `Data: ${dataa} \n [${ora.toString()}]` +
+          username +
+          ' spune : ' +
+          mesaj;
+        ul.appendChild(li);
+      });
 
-        // Ascultăm evenimentul 'mesaj_nou' trimis de backend
-        socket.on('mesaj_nou', (data) => {
-			const { mesaj, username, createdAt } = data;
-			console.log(data);
-            const ul = document.getElementById('listaMesaje');
-            const li = document.createElement('li');
-			const dataa = new Date(createdAt).toLocaleDateString('ro-Ro');
-			const ora = new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); 
-            li.textContent = `Data: ${dataa} \n [${ora.toString()}]` + username + ' spune : ' + mesaj;
-            ul.appendChild(li);
+      // Ascultăm evenimentul 'room_created' pentru a actualiza lista de camere
+      socket.on('room_created', (rooms) => {
+        console.log('room created');
+        const roomsItems = rooms?.rooms || [];
+        console.log(roomsItems);
+        const select = document.getElementById('camereDisponibile');
+        select.innerHTML =
+          '<option value="" disabled selected>Selecteaza camera</option>'; // Resetăm lista de camere
+        roomsItems.forEach((room) => {
+          const option = document.createElement('option');
+          option.value = room;
+          option.textContent = room;
+          select.appendChild(option);
         });
+      });
 
-         // Ascultăm evenimentul 'room_created' pentru a actualiza lista de camere
-        socket.on('room_created', (rooms) => {
-            console.log('room created')
-            const roomsItems = rooms?.rooms || [];
-            console.log(roomsItems)
-            const select = document.getElementById('camereDisponibile');
-            select.innerHTML = '<option value="" disabled selected>Selecteaza camera</option>'; // Resetăm lista de camere
-            roomsItems.forEach(room => {
-                const option = document.createElement('option');
-                option.value = room;
-                option.textContent = room;
-                select.appendChild(option);
-            });
+      socket.on('old_messages', (messages) => {
+        console.log('old messages', messages);
+        const ul = document.getElementById('listaMesaje');
+        ul.innerHTML = '<li> </li>';
+        messages.forEach((it) => {
+          const li = document.createElement('li');
+          const { createdAt, username, message } = it;
+          const dataa = new Date(createdAt).toLocaleDateString('ro-Ro');
+          const ora = new Date(createdAt).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+          li.textContent =
+            `Data: ${dataa} \n [${ora.toString()}]` +
+            username +
+            ' spune : ' +
+            message;
+          ul.appendChild(li);
         });
+      });
 
-        function trimiteMesaj(event) {
-			if (event) event.preventDefault();
-			const username = document.getElementById('numeUser');
-            const input = document.getElementById('inputMesaj');
-            const mesaj = input.value;
-			const usernameValue = username.value;
+      function trimiteMesaj(event) {
+        if (event) event.preventDefault();
+        const username = document.getElementById('numeUser');
+        const input = document.getElementById('inputMesaj');
+        const mesaj = input.value;
+        const usernameValue = username.value;
 
-            const rooms = document.getElementById('camereDisponibile');
-            const activeRoom = rooms.value;
+        const rooms = document.getElementById('camereDisponibile');
+        const activeRoom = rooms.value;
 
-            
-
-			if (usernameValue?.length === 0) {
-				alert('introduceti numele de utilizator te rog ');
-				return;
-			}
-
-            if (activeRoom) {
-                socket.emit('trimite_mesaj_room', { message: mesaj, username: usernameValue, room: activeRoom})
-                input.value = '';
-                return;
-            }
-
-            // Trimitem mesajul către backend
-            socket.emit('trimite_mesaj', { mesaj, username: usernameValue});
-            input.value = ''; // curățăm inputul
+        if (usernameValue?.length === 0) {
+          alert('introduceti numele de utilizator te rog ');
+          return;
         }
 
-        function creeazaCamera() {
-            const inputCamera = document.getElementById('numeCamera');
-            const numeCamera = inputCamera.value;
-
-            if (numeCamera?.length === 0) {
-                alert('introduceti numele camerei te rog ');
-                return;
-            }
-
-            // Trimitem cererea de creare a camerei către backend
-            socket.emit('create_room', numeCamera);
-
-            inputCamera.value = ''; // curățăm inputul
+        if (activeRoom) {
+          socket.emit('trimite_mesaj_room', {
+            message: mesaj,
+            username: usernameValue,
+            room: activeRoom,
+          });
+          input.value = '';
+          return;
         }
 
-        function joinRoom() {
-            const select = document.getElementById('camereDisponibile');
-            const selectedRoom = select.value;
+        // Trimitem mesajul către backend
+        socket.emit('trimite_mesaj', { mesaj, username: usernameValue });
+        input.value = ''; // curățăm inputul
+      }
 
-            if (!selectedRoom) {
-                alert('Selecteaza o camera pentru a te alatura.');
-                return;
-            }
+      function creeazaCamera() {
+        const inputCamera = document.getElementById('numeCamera');
+        const numeCamera = inputCamera.value;
 
-            // Trimitem cererea de alaturare la camera către backend
-            socket.emit('join_room', selectedRoom);
-            document.getElementById('userStatus').textContent = `Conectat la camera: ${selectedRoom}`;
+        if (numeCamera?.length === 0) {
+          alert('introduceti numele camerei te rog ');
+          return;
         }
 
-        function leaveRoom() {
-            const select = document.getElementById('camereDisponibile');
-            const selectedRoom = select.value;
+        // Trimitem cererea de creare a camerei către backend
+        socket.emit('create_room', numeCamera);
 
-            if (!selectedRoom) {
-                alert('Selecteaza o camera pentru a o parasi.');
-                return;
-            }
-            
+        inputCamera.value = ''; // curățăm inputul
+      }
 
-            // Trimitem cererea de parasire a camerei către backend
-            socket.emit('leave_room', selectedRoom);
-            document.getElementById('userStatus').textContent = 'Deconectat';
+      function joinRoom() {
+        const select = document.getElementById('camereDisponibile');
+        const selectedRoom = select.value;
+
+        if (!selectedRoom) {
+          alert('Selecteaza o camera pentru a te alatura.');
+          return;
         }
+
+        // Trimitem cererea de alaturare la camera către backend
+        socket.emit('join_room', selectedRoom);
+        document.getElementById('userStatus').textContent =
+          `Conectat la camera: ${selectedRoom}`;
+
+        document.getElementById('camera').textContent =
+          `Camera : ${selectedRoom}`;
+      }
+
+      function leaveRoom() {
+        const select = document.getElementById('camereDisponibile');
+        const selectedRoom = select.value;
+
+        if (!selectedRoom) {
+          alert('Selecteaza o camera pentru a o parasi.');
+          return;
+        }
+
+        // Trimitem cererea de parasire a camerei către backend
+        socket.emit('leave_room', selectedRoom);
+        document.getElementById('userStatus').textContent = 'Deconectat';
+        document.getElementById('camera').textContent = `Camera : globala`;
+      }
     </script>
-</body>
+  </body>
 </html>
