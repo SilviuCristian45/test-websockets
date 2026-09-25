@@ -112,6 +112,11 @@
           return;
         }
 
+        if (!input.value) {
+          alert('mesajul nu poate fi gol');
+          return;
+        }
+
         if (activeRoom) {
           socket.emit('trimite_mesaj_room', {
             message: mesaj,
@@ -168,6 +173,8 @@
           alert('Selecteaza o camera pentru a o parasi.');
           return;
         }
+
+        select.value = '';
 
         // Trimitem cererea de parasire a camerei către backend
         socket.emit('leave_room', selectedRoom);

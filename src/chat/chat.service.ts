@@ -63,12 +63,14 @@ export class ChatService {
       const whereCondition = room
         ? { room: { name: room } }
         : { room: IsNull() };
-      return await this.repository.find({
-        where: whereCondition,
-        relations: { room: true },
-        order: { createdAt: 'DESC' },
-        take: 50,
-      });
+      return (
+        await this.repository.find({
+          where: whereCondition,
+          relations: { room: true },
+          order: { createdAt: 'DESC' },
+          take: 50,
+        })
+      ).reverse();
     } catch (err) {
       this.logger.error(err);
       return [];

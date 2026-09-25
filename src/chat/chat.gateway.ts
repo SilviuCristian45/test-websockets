@@ -55,8 +55,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       `Mesaj primit de la ${client.id} cu username ${username}:`,
       mesaj,
     );
-
-    // Trimitem mesajul tuturor celor conectați
+    this.eventEmitter.emit(Events.saveMessage, {
+      room: null,
+      message: mesaj,
+      username,
+    });
     client.broadcast.emit('mesaj_nou', { ...data, createdAt: new Date() });
   }
 
